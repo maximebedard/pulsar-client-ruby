@@ -12,7 +12,10 @@ module Pulsar
         end
       )
 
-      client.create_producer(topic: "persistent://public/default/foo", name: "bar") do |producer|
+      client.create_producer(
+        topic: "my-topic-#{Time.now.to_i}",
+        name: "my-producer",
+      ) do |producer|
         producer.produce(data: "WEWER")
       end
     end
@@ -21,7 +24,10 @@ module Pulsar
       client = Client.new(service_url: "pulsar://invalid-hostname:6650")
 
       error = assert_raises(Pulsar::Error) do
-        client.create_producer(topic: "persistent://public/default/foo", name: "bar")
+        client.create_producer(
+          topic: "my-topic-#{Time.now.to_i}",
+          name: "my-producer",
+        )
       end
       assert(error.message.end_with?("ConnectError"))
     end
@@ -38,11 +44,16 @@ module Pulsar
     def test_producer
       block_called = false
 
+      topic = "my-topic-#{Time.now.to_i}"
+
       client = Client.new(service_url: "pulsar://localhost:6650")
-      client.create_producer(topic: "persistent://public/default/foo", name: "bar") do |producer|
+      client.create_producer(
+        topic: topic,
+        name: "my-producer",
+      ) do |producer|
         block_called = true
-        assert_equal("persistent://public/default/foo", producer.topic)
-        assert_equal("bar", producer.name)
+        assert_equal("persistent://public/default/#{topic}", producer.topic)
+        assert_equal("my-producer", producer.name)
 
         producer.produce(data: "baz")
       end
@@ -51,31 +62,31 @@ module Pulsar
 
     def test_producer_multiple_threads
       client = Client.new(service_url: "pulsar://localhost:6650")
-      producer = client.create_producer(topic: "persistent://public/default/foo", name: "bar")
-
-      begin
+      client.create_producer(
+        topic: "my-topic-#{Time.now.to_i}",
+        name: "my-producer",
+      ) do |producer|
         3.times.map do
           Thread.new do
             producer.produce(data: "baz")
           end
         end.each(&:join)
-      ensure
-        producer.close
       end
     end
 
     def test_producer_multiple_processes
       skip("doesn't work")
+
       client = Client.new(service_url: "pulsar://localhost:6650")
-      producer = client.create_producer(topic: "persistent://public/default/foo", name: "bar")
-      begin
+      client.create_producer(
+        topic: "my-topic-#{Time.now.to_i}",
+        name: "my-producer",
+      ) do |producer|
         Process.fork do
           producer.produce(data: "baz")
           exit(0)
         end
         Process.wait
-      ensure
-        producer.close
       end
     end
   end
