@@ -38,7 +38,6 @@
 #endif
 
 pulsar_client_t* pulsar_rb_client_ptr(VALUE instance);
-pulsar_client_t* pulsar_rb_client_ptr(VALUE instance);
 
 extern VALUE rb_ePulsarError;
 
@@ -49,9 +48,7 @@ extern VALUE rb_cPulsarProducer;
 extern void InitProducer(VALUE module);
 
 extern VALUE rb_cPulsarConsumer;
-extern void InitConsumer(VALUE module);
-
 extern VALUE rb_cPulsarMessage;
-extern void InitMessage(VALUE module);
+extern void InitConsumer(VALUE module);
 
 #endif

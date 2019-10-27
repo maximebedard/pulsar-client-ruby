@@ -4,11 +4,29 @@ require "pulsar/pulsar"
 module Pulsar
   class Client
     def create_producer(**options)
-      Producer.new(self, **options)
+      producer = Producer.new(self, **options)
+      if block_given?
+        begin
+          yield producer
+        ensure
+          producer.close
+        end
+      else
+        producer
+      end
     end
 
     def create_consumer(**options)
-      Consumer.new(self, **options)
+      consumer = Consumer.new(self, **options)
+      if block_given?
+        begin
+          yield consumer
+        ensure
+          consumer.close
+        end
+      else
+        consumer
+      end
     end
   end
 
@@ -23,41 +41,5 @@ module Pulsar
     def event_time
       Time.at(event_timestamp)
     end
-  end
-
-  class ConsumerMessage
-    def initialize(id: nil)
-      @id = id
-
-      freeze
-    end
-
-    attr_reader(:id)
-  end
-
-  class ProducerMessage
-    def initialize(
-      key: nil,
-      payload: nil,
-      properties: nil,
-      timestamp: 0,
-      sequence_id: 0
-    )
-      @key = key
-      @payload = payload
-      @properties = properties
-      @timestamp = timestamp
-      @sequence_id = sequence_id
-
-      freeze
-    end
-
-    attr_reader(
-      :key,
-      :payload,
-      :properties,
-      :timestamp,
-      :sequence_id,
-    )
   end
 end

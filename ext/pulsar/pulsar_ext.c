@@ -9,5 +9,4 @@ void Init_pulsar(void) {
   InitClient(mPulsar);
   InitProducer(mPulsar);
   InitConsumer(mPulsar);
-  InitMessage(mPulsar);
 }
