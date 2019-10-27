@@ -10,6 +10,7 @@ Supports:
   - [ ] schema
   - [ ] consume_async
 - [ ] Reader
+- [ ] Auth
 
 ## Installation
 
@@ -33,27 +34,27 @@ Producer:
 
 ```rb
 client = Client.new(service_url: "pulsar://localhost:6650")
-producer = client.create_producer(
+client.create_producer(
   topic: "persistent://public/default/foo",
   name: "bar",
-)
-
-producer.produce(Message.new(data: "foo"))
+) do |producer|
+  producer.produce(Message.new(data: "foo"))
+end
 ```
 
 Consumer:
 
 ```rb
 client = Client.new(service_url: "pulsar://localhost:6650")
-consumer = client.create_consumer(
+client.create_consumer(
   topic: "persistent://public/default/foo",
   subscription: "bar",
-)
-
-loop do
-  message = consumer.receive # will block
-  puts(message.data)
-  consumer.ack(message)
+) do |consumer|
+  loop do
+    message = consumer.receive # will block
+    puts(message.data)
+    consumer.ack(message)
+  end
 end
 ```
 
