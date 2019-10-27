@@ -45,52 +45,92 @@ static VALUE pulsar_rb_producer_initialize(int argc, VALUE* argv, VALUE self) {
   VALUE topic = rb_hash_fetch(rb_config_v, ID2SYM(rb_intern("topic")));
   rb_check_type(topic, T_STRING);
 
+  VALUE name = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("name")));
+  VALUE routing_mode = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("routing_mode")));
+  VALUE hashing_scheme = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("hashing_scheme")));
+  VALUE compression_type = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("compression_type")));
+  VALUE send_timeout_ms = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("send_timeout_ms")));;
+  VALUE max_pending_messages = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("max_pending_messages")));;
+  VALUE max_pending_messages_across_partitions = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("max_pending_messages_across_partitions")));;
+  VALUE block_if_queue_full = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("block_if_queue_full")));;
+  VALUE batching_enabled = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("batching_enabled")));;
+  VALUE batching_max_publish_delay = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("batching_max_publish_delay")));;
+  VALUE batching_max_messages = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("batching_max_messages")));;
+
+  // TODO: schema, properties, message_router
+
   pulsar_producer_configuration_t *config = pulsar_producer_configuration_create();
 
-  VALUE name = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("name")));
-  if (!NIL_P(name) && RB_TYPE_P(name, T_STRING) && RSTRING_LEN(name) > 0) {
+  if (RB_TYPE_P(name, T_STRING) && RSTRING_LEN(name) > 0) {
     pulsar_producer_configuration_set_producer_name(config, StringValueCStr(name));
   }
-  // TODO: raise type error if not string
 
-  VALUE routing_mode = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("routing_mode")));
   // is it possible to have constant values to do a switch case instead?
-  if (!NIL_P(routing_mode)) {
-    if (SYM2ID(routing_mode) == rb_intern("round_robin")) {
+  if (SYMBOL_P(routing_mode)) {
+    ID routing_mode_id = SYM2ID(routing_mode);
+    if (routing_mode_id == rb_intern("round_robin")) {
       pulsar_producer_configuration_set_partitions_routing_mode(config, pulsar_RoundRobinDistribution);
-    } else if (SYM2ID(routing_mode) == rb_intern("single_partition")) {
+    } else if (routing_mode_id == rb_intern("single_partition")) {
       pulsar_producer_configuration_set_partitions_routing_mode(config, pulsar_UseSinglePartition);
-    } else if (SYM2ID(routing_mode) == rb_intern("custom_partition")) {
+    } else if (routing_mode_id == rb_intern("custom_partition")) {
       pulsar_producer_configuration_set_partitions_routing_mode(config, pulsar_CustomPartition);
     }
   }
 
-  VALUE hashing_algorithm = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("hashing_algorithm")));
   // is it possible to have constant values to do a switch case instead?
-  if (!NIL_P(hashing_algorithm)) {
-    if (SYM2ID(hashing_algorithm) == rb_intern("java_string")) {
+  if (SYMBOL_P(hashing_scheme)) {
+    ID hashing_scheme_id = SYM2ID(hashing_scheme);
+    if (hashing_scheme_id == rb_intern("java_string")) {
       pulsar_producer_configuration_set_hashing_scheme(config, pulsar_JavaStringHash);
-    } else if (SYM2ID(hashing_algorithm) == rb_intern("murmur32")) {
+    } else if (hashing_scheme_id == rb_intern("murmur32")) {
       pulsar_producer_configuration_set_hashing_scheme(config, pulsar_Murmur3_32Hash);
-    } else if (SYM2ID(hashing_algorithm) == rb_intern("boost")) {
+    } else if (hashing_scheme_id == rb_intern("boost")) {
       pulsar_producer_configuration_set_hashing_scheme(config, pulsar_BoostHash);
     }
   }
 
-  VALUE compressor = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("compressor")));
   // is it possible to have constant values to do a switch case instead?
-  if (!NIL_P(compressor)) {
-    if (SYM2ID(compressor) == rb_intern("lz4")) {
+  if (SYMBOL_P(compression_type)) {
+    ID compression_type_id = SYM2ID(compression_type);
+    if (compression_type_id == rb_intern("lz4")) {
       pulsar_producer_configuration_set_compression_type(config, pulsar_CompressionLZ4);
-    } else if (SYM2ID(compressor) == rb_intern("zlib")) {
+    } else if (compression_type_id == rb_intern("zlib")) {
       pulsar_producer_configuration_set_compression_type(config, pulsar_CompressionZLib);
-    } else if (SYM2ID(compressor) == rb_intern("zstd")) {
+    } else if (compression_type_id == rb_intern("zstd")) {
       // TODO: zstd compression
       // pulsar_producer_configuration_set_compression_type(config, pulsar_CompressionZstd);
-    } else if (SYM2ID(compressor) == rb_intern("snappy")) {
+    } else if (compression_type_id == rb_intern("snappy")) {
       // TODO: snappy compression
       // pulsar_producer_configuration_set_compression_type(config, pulsar_CompressionSnappy);
     }
+  }
+
+  if (FIXNUM_P(send_timeout_ms)) {
+    pulsar_producer_configuration_set_send_timeout(config, NUM2INT(send_timeout_ms));
+  }
+
+  if (FIXNUM_P(max_pending_messages)) {
+    pulsar_producer_configuration_set_max_pending_messages(config, NUM2INT(max_pending_messages));
+  }
+
+  if (FIXNUM_P(max_pending_messages_across_partitions)) {
+    pulsar_producer_configuration_set_max_pending_messages_across_partitions(config, NUM2INT(max_pending_messages_across_partitions));
+  }
+
+  if (RTEST(block_if_queue_full)) {
+    pulsar_producer_configuration_set_block_if_queue_full(config, 1);
+  }
+
+  if (RTEST(batching_enabled)) {
+    pulsar_producer_configuration_set_batching_enabled(config, 1);
+  }
+
+  if (FIXNUM_P(batching_max_publish_delay)) {
+    pulsar_producer_configuration_set_batching_max_publish_delay_ms(config, NUM2INT(batching_max_publish_delay));
+  }
+
+  if (FIXNUM_P(batching_max_messages)) {
+    pulsar_producer_configuration_set_batching_max_messages(config, NUM2UINT(batching_max_messages));
   }
 
   pulsar_result result = pulsar_client_create_producer(client, StringValueCStr(topic), config, &rb_producer->producer);
@@ -113,10 +153,6 @@ static VALUE pulsar_rb_producer_name(VALUE self, VALUE args) {
   return rb_str_new_cstr(pulsar_producer_get_producer_name(pulsar_rb_producer_ptr(self)));
 }
 
-static int rb_string_present(VALUE v) {
-  return !NIL_P(v) && RB_TYPE_P(v, T_STRING) && RSTRING_LEN(v) > 0;
-}
-
 static VALUE pulsar_rb_producer_produce(int argc, VALUE* argv, VALUE self) {
   VALUE rb_kwargs;
   rb_scan_args_kw(RB_SCAN_ARGS_KEYWORDS, argc, argv, ":", &rb_kwargs);
@@ -137,15 +173,15 @@ static VALUE pulsar_rb_producer_produce(int argc, VALUE* argv, VALUE self) {
     pulsar_message_set_sequence_id(message, NUM2LONG(sequence_id));
   }
 
-  if (rb_string_present(partition_key)) {
+  if (RB_TYPE_P(partition_key, T_STRING) && RSTRING_LEN(partition_key) > 0) {
     pulsar_message_set_partition_key(message, StringValueCStr(partition_key));
   }
 
-  if (rb_string_present(ordering_key)) {
+  if (RB_TYPE_P(ordering_key, T_STRING) && RSTRING_LEN(ordering_key) > 0) {
     pulsar_message_set_ordering_key(message, StringValueCStr(ordering_key));
   }
 
-  if (rb_string_present(data)) {
+  if (RB_TYPE_P(data, T_STRING) && RSTRING_LEN(data) > 0) {
     pulsar_message_set_content(message, StringValuePtr(data), RSTRING_LEN(data));
   }
 

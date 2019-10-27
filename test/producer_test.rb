@@ -1,7 +1,22 @@
 require "test_helper"
+require "logger"
 
 module Pulsar
   class ProducerTest < TestCase
+    def test_producer_logger
+      logger = Logger.new(StringIO.new)
+      client = Client.new(
+        service_url: "pulsar://localhost:6650",
+        logger_proc: -> (_level, _file, _line, _message) do
+          logger.info("foo")
+        end
+      )
+
+      client.create_producer(topic: "persistent://public/default/foo", name: "bar") do |producer|
+        producer.produce(data: "WEWER")
+      end
+    end
+
     def test_producer_connection_error
       client = Client.new(service_url: "pulsar://invalid-hostname:6650")
 
