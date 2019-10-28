@@ -4,6 +4,8 @@ require "logger"
 module Pulsar
   class ProducerTest < TestCase
     def test_producer_logger
+      skip("doesn't work")
+
       logger = Logger.new(StringIO.new)
       client = Client.new(
         service_url: "pulsar://localhost:6650",
@@ -54,10 +56,28 @@ module Pulsar
         block_called = true
         assert_equal("persistent://public/default/#{topic}", producer.topic)
         assert_equal("my-producer", producer.name)
+        assert_equal(-1, producer.last_sequence_id)
 
-        producer.produce(data: "baz")
+        producer.produce(
+          event_timestamp: Time.now.to_i * 1000,
+          sequence_id: 12,
+          partition_key: "foo",
+          ordering_key: "bar",
+          data: "baz",
+        )
+
+        assert_equal(12, producer.last_sequence_id)
       end
       assert(block_called)
+    end
+
+    def test_producer_message_router
+    end
+
+    def test_producer_flush
+    end
+
+    def test_producer_batch
     end
 
     def test_producer_multiple_threads

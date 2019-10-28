@@ -43,7 +43,7 @@ static VALUE pulsar_rb_producer_initialize(int argc, VALUE* argv, VALUE self) {
   pulsar_client_t *client = pulsar_rb_client_ptr(rb_client_v);
 
   VALUE topic = rb_hash_fetch(rb_config_v, ID2SYM(rb_intern("topic")));
-  rb_check_type(topic, T_STRING);
+  Check_Type(topic, T_STRING);
 
   VALUE name = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("name")));
   VALUE routing_mode = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("routing_mode")));
@@ -59,6 +59,7 @@ static VALUE pulsar_rb_producer_initialize(int argc, VALUE* argv, VALUE self) {
 
   // TODO: schema, properties, message_router
 
+  // TODO: fix memory leak here if there's an error parsing the arguments.
   pulsar_producer_configuration_t *config = pulsar_producer_configuration_create();
 
   if (RB_TYPE_P(name, T_STRING) && RSTRING_LEN(name) > 0) {
@@ -215,6 +216,14 @@ static VALUE pulsar_rb_producer_last_sequence_id(VALUE self) {
   return LONG2NUM(pulsar_producer_get_last_sequence_id(pulsar_rb_producer_ptr(self)));
 }
 
+static VALUE pulsar_rb_producer_flush(VALUE self) {
+  pulsar_result result = pulsar_producer_flush(pulsar_rb_producer_ptr(self));
+  if (result != pulsar_result_Ok) {
+    rb_raise(rb_ePulsarError, "failed to flush producer: %s", pulsar_result_str(result));
+  }
+  return Qnil;
+}
+
 VALUE rb_cPulsarProducer;
 void InitProducer(VALUE module) {
   rb_cPulsarProducer = rb_define_class_under(module, "Producer", rb_cData);
@@ -229,4 +238,5 @@ void InitProducer(VALUE module) {
   rb_define_method(rb_cPulsarProducer, "produce", pulsar_rb_producer_produce, -1);
   rb_define_method(rb_cPulsarProducer, "produce_async", pulsar_rb_producer_produce_async, -1);
   rb_define_method(rb_cPulsarProducer, "last_sequence_id", pulsar_rb_producer_last_sequence_id, 0);
+  rb_define_method(rb_cPulsarProducer, "flush", pulsar_rb_producer_flush, 0);
 }

@@ -35,11 +35,20 @@ module Pulsar
 
   class Message
     def publish_time
-      Time.at(publish_timestamp)
+      from_utc_timestamp(publish_timestamp)
     end
 
     def event_time
-      Time.at(event_timestamp)
+      from_utc_timestamp(event_timestamp)
+    end
+
+    private
+
+    def from_utc_timestamp(timestamp)
+      ms = timestamp * 1000000
+      s = ms / 1000000000
+      ns = ms - (s * 1000000000)
+      Time.at(s, ns, :nsec)
     end
   end
 end

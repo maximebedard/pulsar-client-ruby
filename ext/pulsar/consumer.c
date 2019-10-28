@@ -42,12 +42,12 @@ static VALUE pulsar_rb_message_id(VALUE self) {
 
 static VALUE pulsar_rb_message_publish_timestamp(VALUE self) {
   // void -> Fixnum
-  return ULONG2NUM(pulsar_message_get_publish_timestamp(pulsar_rb_message_ptr(self)));
+  return ULL2NUM(pulsar_message_get_publish_timestamp(pulsar_rb_message_ptr(self)));
 }
 
 static VALUE pulsar_rb_message_event_timestamp(VALUE self) {
   // void -> Fixnum
-  return ULONG2NUM(pulsar_message_get_event_timestamp(pulsar_rb_message_ptr(self)));
+  return ULL2NUM(pulsar_message_get_event_timestamp(pulsar_rb_message_ptr(self)));
 }
 
 static VALUE pulsar_rb_message_partition_key(VALUE self) {
@@ -117,12 +117,64 @@ static VALUE pulsar_rb_consumer_initialize(int argc, VALUE* argv, VALUE self) {
   pulsar_client_t *client = pulsar_rb_client_ptr(rb_client_v);
 
   VALUE topic = rb_hash_fetch(rb_config_v, ID2SYM(rb_intern("topic")));
-  rb_check_type(topic, T_STRING);
+  Check_Type(topic, T_STRING);
 
   VALUE subscription_name = rb_hash_fetch(rb_config_v, ID2SYM(rb_intern("subscription")));
-  rb_check_type(subscription_name, T_STRING);
+  Check_Type(subscription_name, T_STRING);
 
+  VALUE unacked_message_timeout_ms = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("unacked_message_timeout_ms")));
+  VALUE nack_redelivery_delay_ms = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("nack_redelivery_delay_ms")));
+  VALUE type = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("type")));
+  VALUE initial_position = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("initial_position")));
+  VALUE receiver_queue_size = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("receiver_queue_size")));
+  VALUE max_total_receiver_queue_size_across_partitions = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("max_total_receiver_queue_size_across_partitions")));
+  VALUE name = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("name")));
+  VALUE read_compacted = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("read_compacted")));
+
+  // TODO: fix memory leak here if there's an error parsing the arguments.
   pulsar_consumer_configuration_t *config = pulsar_consumer_configuration_create();
+
+  if (FIXNUM_P(unacked_message_timeout_ms)) {
+    pulsar_consumer_set_unacked_messages_timeout_ms(config, NUM2ULL(unacked_message_timeout_ms));
+  }
+
+  if (FIXNUM_P(nack_redelivery_delay_ms)) {
+    pulsar_configure_set_negative_ack_redelivery_delay_ms(config, NUM2ULL(nack_redelivery_delay_ms));
+  }
+
+  if (SYMBOL_P(type)) {
+    ID type_id = SYM2ID(type);
+    if (type_id == rb_intern("exclusive")) {
+      pulsar_consumer_configuration_set_consumer_type(config, pulsar_ConsumerExclusive);
+    } else if (type_id == rb_intern("shared")) {
+      pulsar_consumer_configuration_set_consumer_type(config, pulsar_ConsumerShared);
+    } else if (type_id == rb_intern("failover")) {
+      pulsar_consumer_configuration_set_consumer_type(config, pulsar_ConsumerFailover);
+    } else if (type_id == rb_intern("key_shared")) {
+      pulsar_consumer_configuration_set_consumer_type(config, pulsar_ConsumerKeyShared);
+    }
+  }
+
+  if (FIXNUM_P(initial_position)) {
+    // TODO: actually implement this...
+    // pulsar_consumer_set_subscription_initial_position(config, 123)
+  }
+
+  if (FIXNUM_P(receiver_queue_size)) {
+    pulsar_consumer_configuration_set_receiver_queue_size(config, NUM2INT(receiver_queue_size));
+  }
+
+  if (FIXNUM_P(max_total_receiver_queue_size_across_partitions)) {
+    pulsar_consumer_set_max_total_receiver_queue_size_across_partitions(config, NUM2INT(max_total_receiver_queue_size_across_partitions));
+  }
+
+  if (RB_TYPE_P(name, T_STRING) && RSTRING_LEN(name) > 0) {
+    pulsar_consumer_set_consumer_name(config, StringValueCStr(name));
+  }
+
+  if (RTEST(read_compacted)) {
+    pulsar_consumer_set_read_compacted(config, 1);
+  }
 
   pulsar_result result = pulsar_client_subscribe(client, StringValueCStr(topic), StringValueCStr(subscription_name), config, &rb_consumer->consumer);
 

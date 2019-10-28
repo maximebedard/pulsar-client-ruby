@@ -58,6 +58,7 @@ static VALUE pulsar_rb_client_initialize(int argc, VALUE* argv, VALUE self) {
   VALUE tls_allow_insecure_connection = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("tls_allow_insecure_connection")));
   VALUE tls_trust_certs_file_path = rb_hash_aref(rb_config_v, ID2SYM(rb_intern("tls_trust_certs_file_path")));
 
+  // TODO: fix memory leak here if there's an error parsing the arguments.
   pulsar_client_configuration_t *config = pulsar_client_configuration_create();
 
   if (rb_obj_is_proc(logger_proc)) {
